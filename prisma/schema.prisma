@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String    @default("user")
+  createdAt    DateTime  @default(now())
+
+  bookings     Booking[]
+  events       Event[]
+  activityLogs ActivityLog[]
+
+  @@index([email])
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  venue       String
+  date        DateTime
+  capacity    Int
+  price       Float
+  organizerId String
+  createdAt   DateTime  @default(now())
+
+  organizer    User          @relation(fields: [organizerId], references: [id])
+  bookings     Booking[]
+  activityLogs ActivityLog[]
+
+  @@index([title])
+  @@index([date])
+  @@index([organizerId])
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  status    String   @default("confirmed")
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+  @@index([eventId, status])
+  @@index([userId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String?
+  type      String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@index([eventId, type])
+}

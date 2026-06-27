@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bookit_user
+      POSTGRES_PASSWORD: bookit_pass
+      POSTGRES_DB: bookit_db
+    # Host port 5433 -> container 5432. Avoids clashing with a native
+    # Postgres on the host's 5432 (which silently steals localhost
+    # connections and causes Prisma P1010 "user denied access").
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookit_user -d bookit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://bookit_user:bookit_pass@db:5432/bookit_db?schema=public
+      NEXTAUTH_SECRET: supersecretkey_changethis_inprod
+      NEXTAUTH_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
