@@ -31,45 +31,58 @@ function EventsList() {
   const date = searchParams.get("date") || "";
 
   useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (date) params.set("date", date);
-    params.set("page", page.toString());
+    let cancelled = false;
 
-    fetch(`/api/events?${params}`)
-      .then((r) => r.json())
-      .then((data) => {
+    async function load() {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (date) params.set("date", date);
+      params.set("page", page.toString());
+
+      try {
+        const res = await fetch(`/api/events?${params}`);
+        const data = await res.json();
+        if (cancelled) return; // a newer request superseded this one
         setEvents(data.events || []);
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } catch {
+        // Keep the previous results if a request fails.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [page, search, date]);
 
-  function updateParams(updates: Record<string, string>) {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([k, v]) => {
-      if (v) params.set(k, v);
-      else params.delete(k);
-    });
-    params.set("page", "1");
-    router.push(`/events?${params}`);
-  }
-
-  // Debounced search — waits 400ms after user stops typing
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setSearchInput(value);
-      const timer = setTimeout(() => {
-        updateParams({ search: value });
-      }, 400);
-      return () => clearTimeout(timer);
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v) params.set(k, v);
+        else params.delete(k);
+      });
+      // Changing a filter (search/date) jumps back to page 1; navigating
+      // pages keeps the requested page number.
+      if (!("page" in updates)) {
+        params.set("page", "1");
+      }
+      router.push(`/events?${params}`);
     },
-    [searchParams]
+    [searchParams, router]
   );
+
+  // Debounce the search box: push the search param 400ms after typing stops.
+  useEffect(() => {
+    if (searchInput === search) return;
+    const timer = setTimeout(() => updateParams({ search: searchInput }), 400);
+    return () => clearTimeout(timer);
+  }, [searchInput, search, updateParams]);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -83,7 +96,7 @@ function EventsList() {
           type="text"
           placeholder="Search events..."
           value={searchInput}
-          onChange={handleSearchChange}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <input

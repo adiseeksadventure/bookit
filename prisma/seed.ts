@@ -123,6 +123,80 @@ async function main() {
     }),
   ]);
 
+  // --- Bulk events so the listing has enough rows to demo pagination
+  // (20 per page) and search across topics/cities. Deterministic ids +
+  // upsert keep re-seeding idempotent. event-6 .. event-50 = 45 more (50 total).
+  const titlePool = [
+    "React Conf",
+    "Node.js Deep Dive",
+    "AI & ML Summit",
+    "Startup Pitch Day",
+    "UX Design Bootcamp",
+    "DevOps Days",
+    "Web3 Builders Meetup",
+    "Product Management 101",
+    "Data Engineering Summit",
+    "Cybersecurity Workshop",
+    "Flutter Forward",
+    "Rust Systems Meetup",
+    "Cloud Native Day",
+    "GraphQL Conf",
+    "Python Pune",
+    "Kubernetes Workshop",
+    "Indie Hackers Mixer",
+    "Blockchain Bootcamp",
+    "Frontend Masters Live",
+    "Backend Bytes",
+  ];
+  const cityPool = [
+    "Mumbai",
+    "Delhi",
+    "Bengaluru",
+    "Pune",
+    "Hyderabad",
+    "Chennai",
+    "Kolkata",
+    "Goa",
+  ];
+  const venuePool = [
+    "Convention Centre",
+    "Tech Park Auditorium",
+    "Grand Ballroom",
+    "Community Hall",
+    "Innovation Hub",
+    "WeWork",
+    "Riverside Arena",
+    "Expo Centre",
+  ];
+  const capacityPool = [20, 30, 50, 75, 100, 150, 200];
+  const pricePool = [0, 199, 299, 499, 799, 999, 1499];
+
+  const bulkEvents: Promise<unknown>[] = [];
+  for (let idx = 0; idx < 45; idx++) {
+    const i = idx + 6;
+    const topic = titlePool[idx % titlePool.length];
+    const city = cityPool[idx % cityPool.length];
+    bulkEvents.push(
+      prisma.event.upsert({
+        where: { id: `event-${i}` },
+        update: {},
+        create: {
+          id: `event-${i}`,
+          title: `${topic} — ${city}`,
+          description: `${topic} in ${city}. Network with the community, attend talks, and build something.`,
+          venue: `${venuePool[idx % venuePool.length]}, ${city}`,
+          date: future(idx + 3),
+          capacity: capacityPool[idx % capacityPool.length],
+          price: pricePool[idx % pricePool.length],
+          organizerId: idx % 2 === 0 ? org1.id : org2.id,
+        },
+      })
+    );
+  }
+  await Promise.all(bulkEvents);
+
+  // Bookings: the original sold-out event-5, plus a couple so "My Bookings"
+  // and seats-remaining have some variety in the demo.
   await prisma.booking.upsert({
     where: { id: "booking-1" },
     update: {},
@@ -133,8 +207,18 @@ async function main() {
       status: "confirmed",
     },
   });
+  await prisma.booking.upsert({
+    where: { id: "booking-2" },
+    update: {},
+    create: { id: "booking-2", userId: user1.id, eventId: "event-6", status: "confirmed" },
+  });
+  await prisma.booking.upsert({
+    where: { id: "booking-3" },
+    update: {},
+    create: { id: "booking-3", userId: user1.id, eventId: "event-10", status: "confirmed" },
+  });
 
-  console.log("Seeded: 2 organizers, 1 user, 5 events, 1 booking (event-5 sold out)");
+  console.log("Seeded: 2 organizers, 1 user, 50 events, 3 bookings (event-5 sold out)");
 }
 
 main()
