@@ -27,7 +27,10 @@ export default function AttendeesPage({
   useEffect(() => {
     if (!eventId) return;
     fetch(`/api/organizer/events/${eventId}/attendees`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((data) => {
         setEventTitle(data.eventTitle ?? "");
         setAttendees(data.attendees ?? []);

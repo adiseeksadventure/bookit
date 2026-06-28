@@ -27,6 +27,7 @@ export default function EventDetailPage({
   const [eventId, setEventId] = useState<string | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [booking, setBooking] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -37,13 +38,40 @@ export default function EventDetailPage({
 
   useEffect(() => {
     if (!eventId) return;
-    fetch(`/api/events/${eventId}`)
-      .then((r) => r.json())
-      .then((data) => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/events/${eventId}`);
+        if (cancelled) return;
+        // Never render an error body as if it were an event. Map the failure
+        // to friendly copy instead of leaking a raw 404/500/502 payload.
+        if (!res.ok) {
+          setLoadError(
+            res.status === 404
+              ? "This event doesn't exist or has been removed."
+              : "We couldn't load this event right now. Please try again."
+          );
+          setLoading(false);
+          return;
+        }
+        const data: Event = await res.json();
+        if (cancelled) return;
         setEvent(data);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } catch {
+        if (cancelled) return;
+        setLoadError(
+          "We couldn't load this event right now. Please try again."
+        );
+        setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
   async function handleBook() {
@@ -86,8 +114,16 @@ export default function EventDetailPage({
 
   if (!event) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 text-gray-500">
-        Event not found.
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <button
+          onClick={() => router.back()}
+          className="text-blue-600 hover:underline text-sm mb-6 block"
+        >
+          ← Back to events
+        </button>
+        <p className="text-gray-500">
+          {loadError || "This event doesn't exist or has been removed."}
+        </p>
       </div>
     );
   }

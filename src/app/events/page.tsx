@@ -22,6 +22,7 @@ function EventsList() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [searchInput, setSearchInput] = useState(
     searchParams.get("search") || ""
   );
@@ -42,13 +43,16 @@ function EventsList() {
 
       try {
         const res = await fetch(`/api/events?${params}`);
+        if (!res.ok) throw new Error();
         const data = await res.json();
         if (cancelled) return; // a newer request superseded this one
         setEvents(data.events || []);
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
+        setLoadError("");
       } catch {
-        // Keep the previous results if a request fails.
+        // Surface the failure instead of silently showing "No events found".
+        if (!cancelled) setLoadError("We couldn't load events. Please refresh.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,7 +131,7 @@ function EventsList() {
         )}
       </div>
 
-      {!loading && (
+      {!loading && !loadError && (
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{total} events found</p>
       )}
 
@@ -135,6 +139,8 @@ function EventsList() {
         <div className="text-center py-12 text-gray-500">
           Loading events...
         </div>
+      ) : loadError ? (
+        <div className="text-center py-12 text-red-500">{loadError}</div>
       ) : events.length === 0 ? (
         <div className="text-center py-12 text-gray-500">No events found</div>
       ) : (

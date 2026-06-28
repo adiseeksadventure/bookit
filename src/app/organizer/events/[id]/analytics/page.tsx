@@ -29,7 +29,11 @@ export default function AnalyticsPage({
   useEffect(() => {
     if (!eventId) return;
     fetch(`/api/organizer/events/${eventId}/analytics`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        // Don't render an error body as analytics — route it to the error UI.
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((d) => {
         setData(d);
         setLoading(false);

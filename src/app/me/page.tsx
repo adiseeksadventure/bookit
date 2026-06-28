@@ -23,6 +23,7 @@ export default function MyBookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,12 +33,19 @@ export default function MyBookingsPage() {
     }
     if (status === "authenticated") {
       fetch("/api/me/bookings")
-        .then((r) => r.json())
+        .then(async (r) => {
+          // A failed request must surface as an error, not an empty list.
+          if (!r.ok) throw new Error();
+          return r.json();
+        })
         .then((data) => {
           setBookings(data.bookings || []);
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch(() => {
+          setLoadError("We couldn't load your bookings. Please refresh.");
+          setLoading(false);
+        });
     }
   }, [status, router]);
 
@@ -66,6 +74,14 @@ export default function MyBookingsPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8 text-gray-500 dark:text-gray-400">
         Loading your bookings...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8 text-red-500">
+        {loadError}
       </div>
     );
   }

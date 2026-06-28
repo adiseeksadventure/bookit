@@ -36,7 +36,10 @@ export default function OrganizerDashboard() {
     }
 
     fetch("/api/organizer/events")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((data) => {
         setEvents(data.events ?? []);
         setLoading(false);

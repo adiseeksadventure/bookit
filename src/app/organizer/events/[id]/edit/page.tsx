@@ -40,7 +40,10 @@ export default function EditEventPage({
     if (!eventId) return;
     // Fetch from the organizer API so past events also load correctly.
     fetch(`/api/organizer/events/${eventId}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((data) => {
         // Render the stored UTC instant as the equivalent local wall-clock
         // time for the datetime-local input.
