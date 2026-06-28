@@ -163,11 +163,13 @@ function EventsList() {
                   </div>
                   <p className="text-sm text-gray-500">
                     {event.venue} ·{" "}
-                    {new Date(event.date).toLocaleDateString("en-IN", {
+                    {new Date(event.date).toLocaleString("en-IN", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",
                       year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
                     })}
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
