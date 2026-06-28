@@ -1,7 +1,12 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/db";
+
+// The Next app keeps Auth.js purely for *session* management (the signed,
+// stateless JWT cookie and the SSR `auth()` helper). The actual credential
+// check is delegated to the Express backend so the Next app never touches the
+// database — see NOTES §1.1. Kept inline (not imported from backend.ts) to avoid
+// an import cycle: backend.ts imports `auth` from here.
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4000";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // Store the session in a signed JWT cookie instead of the database.
@@ -38,25 +43,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        // Verify the password against the Express backend (which owns bcrypt and
+        // the users table). Whatever we return here becomes the `user` in the
+        // jwt callback; returning null fails the sign-in.
+        let res: Response;
+        try {
+          res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+            cache: "no-store",
+          });
+        } catch {
+          return null;
+        }
 
-        if (!user) return null;
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data?.user?.id) return null;
 
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-
-        if (!valid) return null;
-
-        // Whatever we return here becomes the `user` in the jwt callback.
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
         };
       },
     }),
