@@ -276,12 +276,17 @@ migration.
 - Its FK is **`ON DELETE SET NULL`** (the only relation that isn't `RESTRICT`):
   deleting a user must not destroy the historical log; the row survives with a
   null actor.
+- The headline metric is the **view → booking conversion rate** =
+  `booking_confirmed / event_viewed` (confirmed bookings ÷ total views), exactly
+  as the brief frames it. `event_viewed`, `booking_started`, and
+  `booking_confirmed` are also surfaced as raw funnel counts next to it.
 - `booking_started` is logged **outside** the booking transaction, best‑effort
   (errors swallowed). Two reasons: (a) analytics must never block or fail a real
   booking, and (b) we deliberately want to record the *attempt* even when it ends
-  in `SOLD_OUT` — that's exactly what makes the **view → booking conversion rate**
-  meaningful. `booking_confirmed`, by contrast, is logged *inside* the
-  transaction so it can't be lost or double‑counted.
+  in `SOLD_OUT`, so the **bookings‑started** funnel count reflects real demand
+  (including would‑be buyers a sold‑out event turned away). `booking_confirmed`,
+  by contrast, is logged *inside* the transaction so it can't be lost or
+  double‑counted.
 
 ### 3.5 Foreign‑key delete behavior
 `Event→User`, `Booking→User`, `Booking→Event` are all **`ON DELETE RESTRICT`**:
@@ -410,8 +415,9 @@ genuinely useful for boilerplate and for surfacing the Next.js 16
 - **Where the analytics writes live.** I deliberately moved `booking_started`
   *outside* the transaction (best‑effort) and kept `booking_confirmed` *inside*
   it — so analytics can never block or fail a real booking, yet we still capture
-  failed attempts for the conversion metric (§3.4). The naive version logged
-  everything inline, which would let a logging hiccup roll back a real booking.
+  failed attempts as real demand in the funnel counts (§3.4). The naive version
+  logged everything inline, which would let a logging hiccup roll back a real
+  booking.
 - **"Already booked" ordering.** I put the already‑booked check *before* the
   capacity check so an existing attendee gets the accurate message on a full
   event rather than a misleading "sold out" (§2.2).

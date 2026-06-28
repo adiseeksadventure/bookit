@@ -248,9 +248,9 @@ organizerRouter.get(
     const started = counts["booking_started"] ?? 0;
     const confirmed = counts["booking_confirmed"] ?? 0;
     const cancelled = counts["booking_cancelled"] ?? 0;
-    // Conversion = confirmed / started; guard against divide-by-zero.
+    // View → booking conversion = confirmed bookings / views; guard divide-by-zero.
     const conversionRate =
-      started === 0 ? 0 : Math.round((confirmed / started) * 100);
+      views === 0 ? 0 : Math.round((confirmed / views) * 100);
 
     res.json({
       eventId: id,

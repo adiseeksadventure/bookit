@@ -92,13 +92,13 @@ export default function AnalyticsPage({
 
       <div className="bg-white border border-gray-200 rounded-lg p-5">
         <p className="text-sm text-gray-500 mb-1">
-          Bookings Started → Confirmed Conversion Rate
+          View → Booking Conversion Rate
         </p>
         <p className="text-4xl font-bold text-blue-600">
           {data.conversionRate}%
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          {data.bookingConfirmed} confirmed out of {data.bookingStarted} started
+          {data.bookingConfirmed} booked out of {data.views} views
         </p>
         <div className="mt-3 w-full bg-gray-100 rounded-full h-2">
           <div
