@@ -15,9 +15,9 @@ export function Navbar() {
   const isOrganizer = session?.user?.role === "organizer";
 
   const linkClass = (href: string) =>
-    `text-sm hover:text-blue-600 ${
+    `text-sm hover:text-[#F05537] ${
       pathname === href || pathname.startsWith(href + "/")
-        ? "text-blue-600 font-medium"
+        ? "text-[#F05537] font-medium"
         : "text-gray-600"
     }`;
 
@@ -25,7 +25,7 @@ export function Navbar() {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
       <nav className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/events" className="text-lg font-bold text-gray-900">
-          Book<span className="text-blue-600">It</span>
+          Book<span className="text-[#F05537]">It</span>
         </Link>
 
         <div className="flex items-center gap-4">
@@ -61,13 +61,13 @@ export function Navbar() {
             <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
               <Link
                 href="/login"
-                className="text-sm text-gray-600 hover:text-blue-600"
+                className="text-sm text-gray-600 hover:text-[#F05537]"
               >
                 Sign in
               </Link>
               <Link
                 href="/signup"
-                className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 font-medium"
+                className="text-sm bg-[#F05537] text-white px-3 py-1.5 rounded-md hover:bg-[#d1410c] font-medium"
               >
                 Sign up
               </Link>
