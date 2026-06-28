@@ -1,7 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# dependencies (root frontend + the decoupled backend package)
 /node_modules
+/server/node_modules
+/server/dist
 /.pnp
 .pnp.*
 .yarn/*
@@ -32,6 +34,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but keep the templates tracked
+!.env.example
+!server/.env.example
 
 # vercel
 .vercel

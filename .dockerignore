@@ -1,0 +1,21 @@
+# Frontend build context (root). Keep the backend, deps, and build artifacts out
+# of the Next.js image entirely — the frontend ships no backend code.
+node_modules
+.next
+out
+server
+dist
+.git
+.gitignore
+npm-debug.log*
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
+docker-compose.yml
+README.md
+NOTES.md
+context.txt
+.DS_Store
+*.tsbuildinfo

@@ -1,3 +1,15 @@
+# Full-stack orchestration for BookIt. Three decoupled services, each built from
+# its own context/Dockerfile:
+#
+#   db        Postgres — the only stateful service.
+#   backend   Express API — the ONLY service with DB credentials. Not published
+#             to the host; only `frontend` reaches it over the internal network.
+#   frontend  Next.js edge — serves the UI and proxies /api/* to `backend`.
+#
+#   docker compose up --build         # bring the whole stack up
+#   docker compose up -d db           # just Postgres (for local `npm run dev`)
+#   docker compose run --rm backend npm run seed   # seed the database (one-off)
+
 services:
   db:
     image: postgres:16-alpine
@@ -5,9 +17,8 @@ services:
       POSTGRES_USER: bookit_user
       POSTGRES_PASSWORD: bookit_pass
       POSTGRES_DB: bookit_db
-    # Host port 5433 -> container 5432. Avoids clashing with a native
-    # Postgres on the host's 5432 (which silently steals localhost
-    # connections and causes Prisma P1010 "user denied access").
+    # Host port 5433 -> container 5432. Avoids clashing with a native Postgres on
+    # the host's 5432. Published so local `npm run dev` and tooling can reach it.
     ports:
       - "5433:5432"
     volumes:
@@ -18,19 +29,17 @@ services:
       timeout: 5s
       retries: 10
 
-  # The Express backend — the ONLY service that talks to Postgres. It is not
-  # published to the host: the browser can't reach it, only the `app` service
-  # can (over the internal compose network, via the service name `backend`).
-  # This is the decoupling the architecture is built around (see NOTES §1.1).
-  # Run migrations/seed against THIS service — it owns the database connection.
   backend:
-    build: .
-    command: npm run server
+    build:
+      context: ./server
     environment:
+      # Reaches the db service by name over the internal compose network.
       DATABASE_URL: postgresql://bookit_user:bookit_pass@db:5432/bookit_db?schema=public
-      # MUST match the app's NEXTAUTH_SECRET — the app mints JWTs the backend verifies.
+      # MUST equal the frontend's NEXTAUTH_SECRET — the edge mints JWTs this verifies.
       AUTH_SECRET: supersecretkey_changethis_inprod
       PORT: "4000"
+    # Intentionally NOT published — the browser must never reach the backend
+    # directly. Only the frontend service can, via http://backend:4000.
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:4000/api/health || exit 1"]
       interval: 5s
@@ -40,19 +49,18 @@ services:
       db:
         condition: service_healthy
 
-  # The public edge: serves the UI and a thin proxy API. Holds NO database
-  # credentials — it forwards every /api/* call to `backend` and only manages
-  # Auth.js sessions.
-  app:
-    build: .
+  frontend:
+    build:
+      context: .
     ports:
       - "3000:3000"
     environment:
       BACKEND_URL: http://backend:4000
-      # Same value as the backend's AUTH_SECRET (Auth.js session signing + the
-      # short-lived JWT the proxy forwards to the backend).
+      # Same value as the backend's AUTH_SECRET (session signing + proxy JWT).
       NEXTAUTH_SECRET: supersecretkey_changethis_inprod
       NEXTAUTH_URL: http://localhost:3000
+      # Self-hosted Auth.js behind compose: trust the forwarded host.
+      AUTH_TRUST_HOST: "true"
     depends_on:
       backend:
         condition: service_healthy
