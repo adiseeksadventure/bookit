@@ -11,25 +11,30 @@ just the Next proxy.
 
 ## Run it
 
-From the repo root (it reuses the root `node_modules`, `.env`, and Prisma client):
+This is a **self-contained npm package** — its own `package.json`,
+`node_modules`, `tsconfig`, and `.env`. Run everything from `server/`:
 
 ```bash
-npm install                 # if you haven't already
-npx prisma generate         # if the client isn't generated yet
-npm run server              # start on http://localhost:4000
-# or: npm run server:dev    # watch mode (tsx watch)
+cd server
+cp .env.example .env         # DATABASE_URL, AUTH_SECRET, PORT
+npm install                  # installs deps + generates the Prisma client (postinstall)
+npm run migrate              # apply migrations (prisma migrate deploy)
+npm run seed                 # load sample data
+npm run dev                  # watch mode (tsx) on http://localhost:4000
+# production: npm run build && npm start   (tsc → node dist/index.js)
 ```
 
-Config (read from the root `.env`, same file the Next app uses):
+Config (read from `server/.env`):
 
 | Var | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | yes | Postgres connection (same DB as the Next app). |
-| `AUTH_SECRET` / `NEXTAUTH_SECRET` | yes | Secret used to sign session JWTs (reuses the Next app's). |
+| `DATABASE_URL` | yes | Postgres connection string — this service is the only DB client. |
+| `AUTH_SECRET` / `NEXTAUTH_SECRET` | yes | Secret for signing/verifying session JWTs. **Must equal the frontend's `NEXTAUTH_SECRET`.** |
 | `PORT` | no | Listen port (default `4000`). |
 | `CORS_ORIGIN` | no | Comma‑separated allowed origins. Omit to reflect any origin (dev). |
 
-Typecheck only: `npm run server:typecheck`.
+Scripts: `npm run dev` (watch) · `npm run build` (tsc → `dist/`) · `npm start`
+(run compiled) · `npm run typecheck` · `npm run migrate` · `npm run seed`.
 
 ## Auth (the one difference from the Next app)
 
@@ -73,10 +78,18 @@ GET  /api/health          liveness probe
 
 ```
 server/
+  package.json            backend deps + scripts (its own node_modules)
+  tsconfig.json           tsc build → dist/ (CommonJS)
+  Dockerfile              build image: tsc → node dist/index.js
+  prisma.config.ts        schema path + seed command
+  prisma/
+    schema.prisma         User, Event, Booking, ActivityLog
+    migrations/           versioned SQL
+    seed.ts               sample data (idempotent upserts)
   src/
     index.ts              bootstrap: load .env, listen
     app.ts                build the app, mount routers, route protection (mirrors proxy.ts)
-    db.ts                 Prisma client (mirrors src/lib/db.ts)
+    db.ts                 Prisma client (pg driver adapter)
     lib/
       auth.ts             JWT sign/verify + session cookie options
       middleware.ts       attachUser (optional), requireAuth, asyncHandler

@@ -60,8 +60,9 @@ DB‑touching parts are delegated to the backend:
 
 That is why the backend speaks **plain JWT** (cookie *or* bearer) instead of
 Auth.js's encrypted cookie: it has to serve the Next edge and any other client
-(a mobile app, a CLI, another service) identically. Run the backend with
-`npm run server` (`:4000`); see [`server/README.md`](server/README.md).
+(a mobile app, a CLI, another service) identically. The backend is its own npm
+package — run it with `cd server && npm run dev` (`:4000`); see
+[`server/README.md`](server/README.md).
 
 API surface — the browser calls these on **Next.js** (`src/app/api/**`), which
 proxies each to the **Express backend** (`server/src/routes/**`):
