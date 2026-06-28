@@ -23,6 +23,11 @@ export default auth((req) => {
     (pathname.startsWith("/api/events") && req.method === "POST");
 
   if (isProtected && !isLoggedIn) {
+    // API routes expect JSON, so answer with a clean 401 instead of an HTML
+    // login redirect. Page routes redirect to the login UI as usual.
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
@@ -30,6 +35,9 @@ export default auth((req) => {
 });
 
 export const config = {
-  // Run on every route except Next.js internals and static assets.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Run on app routes and protected APIs, but skip NextAuth's own endpoints
+  // (/api/auth/*) — they handle their own auth, and re-running the auth
+  // middleware there just duplicates session/CSRF cookie handling — plus
+  // Next.js internals and static assets.
+  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
 };

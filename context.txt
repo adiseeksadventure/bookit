@@ -1,0 +1,485 @@
+# BOOKIT - FULL STACK TAKE HOME ASSIGNMENT
+
+## Overview
+
+Build a full-stack web application called "BookIt", a live event booking platform similar to a simplified Eventbrite.
+
+Time Limit: 3 Days
+
+Required Stack:
+- React or Next.js
+- Node.js
+- Express.js
+- PostgreSQL
+
+The application should allow organizers to create events with limited seating and users to browse and book those events.
+
+---
+
+# User Roles
+
+There are two roles:
+
+## User
+- Sign up
+- Log in
+- Browse events
+- Search events
+- Book seats
+- View bookings
+- Cancel bookings
+
+## Organizer
+
+An organizer can do everything a normal user can, plus:
+
+- Create events
+- Edit events
+- Set event capacity
+- View attendees
+- View analytics for their events
+
+Authentication can use a single user table with a role field:
+- user
+- organizer
+
+---
+
+# Required Features
+
+## 1. Authentication
+
+Implement:
+
+- Sign up
+- Log in
+- Log out
+
+Requirements:
+
+- Email/password authentication
+- Passwords must be hashed using bcrypt or argon2
+- Never store plaintext passwords
+- Protected routes
+    - Guests cannot create events
+    - Guests cannot make bookings
+
+---
+
+## 2. Browse and Search Events
+
+Create an events listing page showing:
+
+- Title
+- Date
+- Time
+- Venue
+- Seats Remaining
+- Price
+
+Support:
+
+- Search by title
+- Filter by date
+- Pagination
+
+Pagination example:
+20 events per page
+
+Important:
+
+The system should scale to over 100,000 events.
+
+Do NOT:
+
+- Load everything into memory
+- Filter in JavaScript
+
+Instead:
+
+- Use indexed SQL queries
+- Efficient pagination
+
+Sold-out events must:
+
+- Be clearly marked
+- Not allow bookings
+
+---
+
+## 3. Event Detail and Booking
+
+Each event page should display:
+
+- Full description
+- Venue
+- Date
+- Capacity
+- Live seats remaining
+
+Booking requirements:
+
+Booking creates:
+
+- One confirmed booking
+
+Critical Business Rule:
+
+If capacity = N
+
+Confirmed bookings must NEVER exceed N.
+
+Concurrency requirement:
+
+If two users try booking the last seat simultaneously:
+
+Exactly ONE booking succeeds.
+
+The other request must receive a clean "Sold Out" response.
+
+The reviewers will test concurrent requests.
+
+Additional rule:
+
+A user cannot book the same event twice.
+
+---
+
+## 4. My Bookings
+
+Users can view all bookings.
+
+Display:
+
+- Event details
+- Booking status
+
+Allow:
+
+- Cancel booking
+
+Cancellation must:
+
+- Delete/cancel booking
+- Return the seat back to available inventory
+
+---
+
+## 5. Organizer Dashboard
+
+Organizer can:
+
+Create Event
+
+Fields:
+
+- Title
+- Description
+- Venue
+- Date/Time
+- Capacity
+- Price
+
+Edit Event
+
+Constraint:
+
+Capacity can NEVER become smaller than the number of already confirmed bookings.
+
+Organizer Dashboard should show:
+
+- Organizer's events
+- Bookings sold per event
+
+Organizer can also:
+
+- View attendee list
+
+---
+
+## 6. Analytics
+
+For every organizer event show:
+
+- Total Views
+- Bookings Started
+- Confirmed Bookings
+- View → Booking Conversion Rate
+
+Analytics must be calculated from an Activity Log table.
+
+---
+
+# Database Requirements
+
+Use PostgreSQL only.
+
+Minimum tables:
+
+users
+- Accounts
+- Role
+
+events
+- Organizer owner
+- Capacity
+- Event information
+
+bookings
+- User
+- Event
+- Booking relationship
+
+Must enforce:
+No overselling.
+
+activity_log
+
+Append-only table.
+
+Events include:
+
+- event_viewed
+- booking_started
+- booking_confirmed
+- booking_cancelled
+
+Analytics must be computed from this table.
+
+---
+
+# Migrations
+
+Schema must be managed through migration files.
+
+Allowed tools include:
+
+- Prisma
+- Knex
+- Drizzle
+- node-pg-migrate
+- TypeORM
+- Flyway
+
+Requirements:
+
+- One command builds the entire database
+- Fresh database should recreate everything
+- No manual SQL execution
+
+Include:
+
+- Indexes for search
+- Indexes for pagination
+
+Provide a seed script that inserts:
+
+- Sample organizers
+- Sample users
+- Sample events
+- Sample bookings
+
+---
+
+# Suggested API
+
+Authentication
+
+POST /auth/signup
+
+POST /auth/login
+
+POST /auth/logout
+
+Events
+
+GET /events
+Supports:
+
+- search
+- date
+- page
+
+GET /events/:id
+
+Should log:
+
+event_viewed
+
+Booking
+
+POST /events/:id/book
+
+This is the concurrency-critical endpoint.
+
+Bookings
+
+DELETE /bookings/:id
+
+Should:
+
+- Cancel booking
+- Free seat
+
+User
+
+GET /me/bookings
+
+Organizer
+
+POST /organizer/events
+
+PATCH /organizer/events/:id
+
+GET /organizer/events
+
+Returns organizer events plus sold counts.
+
+GET /organizer/events/:id/attendees
+
+GET /organizer/events/:id/analytics
+
+Returns analytics computed from activity_log.
+
+Use proper HTTP status codes.
+
+Examples:
+
+401 Unauthorized
+
+409 Conflict (Sold Out)
+
+Return meaningful JSON error responses.
+
+---
+
+# Acceptance Criteria
+
+The reviewers will verify:
+
+✓ Migrations recreate entire schema
+
+✓ Seed script works
+
+✓ Authentication works
+
+✓ User and Organizer accounts both work
+
+✓ Event listing is fast
+
+✓ Search works
+
+✓ Date filtering works
+
+✓ Pagination works
+
+✓ Last seat booking succeeds for only one simultaneous request
+
+✓ Confirmed bookings never exceed capacity
+
+✓ Cancelling restores available seats
+
+✓ Organizer can create events
+
+✓ Organizer can edit events
+
+✓ Capacity cannot drop below seats already booked
+
+✓ Analytics correctly uses activity_log
+
+✓ Project runs locally in under 10 minutes using README instructions
+
+---
+
+# Deliverables
+
+1. Git Repository
+
+Requirements:
+
+- Real commit history
+- Not one giant commit
+
+2. README.md
+
+Include:
+
+- Installation
+- Run instructions
+- Migration command
+- Seed command
+
+Docker Compose is strongly preferred.
+
+Should start:
+
+- PostgreSQL
+- Application
+
+3. NOTES.md
+
+Explain:
+
+- How no-oversell guarantee was implemented
+- Database schema decisions
+- Indexing decisions
+- Any AI tools used
+- Places where you disagreed with AI
+
+4. Screen Recording
+
+Length:
+
+3–5 minutes
+
+Demonstrate:
+
+- Booking flow
+- Explain concurrency implementation
+
+---
+
+# Evaluation Rubric
+
+Concurrency Correctness (30%)
+
+- No overselling
+- Correct simultaneous booking handling
+- Clear explanation
+
+Completeness (20%)
+
+- Every required feature implemented
+
+API & Backend Design (20%)
+
+- Clean API
+- Proper HTTP status codes
+- Good project structure
+- Clear error handling
+
+Database & Migrations (15%)
+
+- Correct schema
+- Proper migrations
+- Seed data
+- Appropriate indexes
+
+UI / UX (15%)
+
+- Clean user flows
+- Loading states
+- Error states
+- Sold-out handling
+- Edge cases
+- Not just raw forms
+
+---
+
+# AI Usage Policy
+
+You may use AI tools during development.
+
+However, there will be a live 45-minute follow-up session where you'll extend your submitted code (for example, adding a waitlist when an event sells out).
+
+You must fully understand your implementation. If you cannot navigate or modify your own code during the interview, it will be considered a disqualifying factor.
